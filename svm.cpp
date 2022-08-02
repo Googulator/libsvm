@@ -1983,58 +1983,58 @@ static void svm_simple_binary_svc_probability(
 {
 	double *dec_values = Malloc(double,prob->l);
 
-    int j;
-    struct svm_problem subprob;
+	int j;
+	struct svm_problem subprob;
 
-    subprob.l = prob->l;
-    subprob.x = Malloc(struct svm_node*,subprob.l);
-    subprob.y = Malloc(double,subprob.l);
+	subprob.l = prob->l;
+	subprob.x = Malloc(struct svm_node*,subprob.l);
+	subprob.y = Malloc(double,subprob.l);
 
-    for(j=0;j<prob->l;j++)
-    {
-        subprob.x[j] = prob->x[j];
-        subprob.y[j] = prob->y[j];
-    }
-    int p_count=0,n_count=0;
-    for(j=0;j<prob->l;j++)
-        if(prob->y[j]>0)
-            p_count++;
-        else
-            n_count++;
+	for(j=0;j<prob->l;j++)
+	{
+		subprob.x[j] = prob->x[j];
+		subprob.y[j] = prob->y[j];
+	}
+	int p_count=0,n_count=0;
+	for(j=0;j<prob->l;j++)
+		if(prob->y[j]>0)
+			p_count++;
+		else
+			n_count++;
 
-    if(p_count==0 && n_count==0)
-        for(j=0;j<prob->l;j++)
-            dec_values[j] = 0;
-    else if(p_count > 0 && n_count == 0)
-        for(j=0;j<prob->l;j++)
-            dec_values[j] = -1;
-    else if(p_count == 0 && n_count > 0)
-        for(j=0;j<prob->l;j++)
-            dec_values[j] = 1;
-    else
-    {
-        svm_parameter subparam = *param;
-        subparam.probability=0;
-        subparam.C=1.0;
-        subparam.nr_weight=2;
-        subparam.weight_label = Malloc(int,2);
-        subparam.weight = Malloc(double,2);
-        subparam.weight_label[0]=+1;
-        subparam.weight_label[1]=-1;
-        subparam.weight[0]=Cp;
-        subparam.weight[1]=Cn;
-        struct svm_model *submodel = svm_train_sub(&subprob,&subparam,f);
-        for(j=0;j<prob->l;j++)
-        {
-            svm_predict_values(submodel,prob->x[j],&(dec_values[j]));
-            // ensure +1 -1 order; reason not using CV subroutine
-            dec_values[j] *= submodel->label[0];
-        }
-        svm_free_and_destroy_model(&submodel);
-        svm_destroy_param(&subparam);
-    }
-    free(subprob.x);
-    free(subprob.y);
+	if(p_count==0 && n_count==0)
+		for(j=0;j<prob->l;j++)
+			dec_values[j] = 0;
+	else if(p_count > 0 && n_count == 0)
+		for(j=0;j<prob->l;j++)
+			dec_values[j] = -1;
+	else if(p_count == 0 && n_count > 0)
+		for(j=0;j<prob->l;j++)
+			dec_values[j] = 1;
+	else
+	{
+		svm_parameter subparam = *param;
+		subparam.probability=0;
+		subparam.C=1.0;
+		subparam.nr_weight=2;
+		subparam.weight_label = Malloc(int,2);
+		subparam.weight = Malloc(double,2);
+		subparam.weight_label[0]=+1;
+		subparam.weight_label[1]=-1;
+		subparam.weight[0]=Cp;
+		subparam.weight[1]=Cn;
+		struct svm_model *submodel = svm_train_sub(&subprob,&subparam,f);
+		for(j=0;j<prob->l;j++)
+		{
+			svm_predict_values(submodel,prob->x[j],&(dec_values[j]));
+			// ensure +1 -1 order; reason not using CV subroutine
+			dec_values[j] *= submodel->label[0];
+		}
+		svm_free_and_destroy_model(&submodel);
+		svm_destroy_param(&subparam);
+	}
+	free(subprob.x);
+	free(subprob.y);
 	
 	sigmoid_train(prob->l,dec_values,dec_values,probA,probB);
 	free(dec_values);
@@ -2407,168 +2407,168 @@ svm_model *svm_train_sub(const svm_problem *prob, const svm_parameter *param, co
 	model->param = *param;
 	model->free_sv = 0;	// XXX
 
-    // classification
-    int l = prob->l;
-    int nr_class;
-    int *label = NULL;
-    int *start = NULL;
-    int *count = NULL;
-    int *perm = Malloc(int,l);
+	// classification
+	int l = prob->l;
+	int nr_class;
+	int *label = NULL;
+	int *start = NULL;
+	int *count = NULL;
+	int *perm = Malloc(int,l);
 
-    // group training data of the same class
-    svm_group_classes(prob,&nr_class,&label,&start,&count,perm);
-    if(nr_class != 2)
-        info("WARNING: svm_train_sub called for non-binary-SVC problem!\n");
+	// group training data of the same class
+	svm_group_classes(prob,&nr_class,&label,&start,&count,perm);
+	if(nr_class != 2)
+		info("WARNING: svm_train_sub called for non-binary-SVC problem!\n");
 
-    svm_node **x = Malloc(svm_node *,l);
-    int i;
-    for(i=0;i<l;i++)
-        x[i] = prob->x[perm[i]];
+	svm_node **x = Malloc(svm_node *,l);
+	int i;
+	for(i=0;i<l;i++)
+		x[i] = prob->x[perm[i]];
 
-    // calculate weighted C
+	// calculate weighted C
 
-    double *weighted_C = Malloc(double, nr_class);
-    for(i=0;i<nr_class;i++)
-        weighted_C[i] = param->C;
-    for(i=0;i<param->nr_weight;i++)
-    {
-        int j;
-        for(j=0;j<nr_class;j++)
-            if(param->weight_label[i] == label[j])
-                break;
-        if(j == nr_class)
-            fprintf(stderr,"WARNING: class label %d specified in weight is not found\n", param->weight_label[i]);
-        else
-            weighted_C[j] *= param->weight[i];
-    }
+	double *weighted_C = Malloc(double, nr_class);
+	for(i=0;i<nr_class;i++)
+		weighted_C[i] = param->C;
+	for(i=0;i<param->nr_weight;i++)
+	{
+		int j;
+		for(j=0;j<nr_class;j++)
+			if(param->weight_label[i] == label[j])
+				break;
+		if(j == nr_class)
+			fprintf(stderr,"WARNING: class label %d specified in weight is not found\n", param->weight_label[i]);
+		else
+			weighted_C[j] *= param->weight[i];
+	}
 
-    // train k*(k-1)/2 models
+	// train k*(k-1)/2 models
 
-    bool *nonzero = Malloc(bool,l);
-    for(i=0;i<l;i++)
-        nonzero[i] = false;
+	bool *nonzero = Malloc(bool,l);
+	for(i=0;i<l;i++)
+		nonzero[i] = false;
 
-    int p = 0;
-    for(i=0;i<nr_class;i++)
-        for(int j=i+1;j<nr_class;j++)
-        {
-            svm_problem sub_prob;
-            int si = start[i], sj = start[j];
-            int ci = count[i], cj = count[j];
-            sub_prob.l = ci+cj;
-            sub_prob.x = Malloc(svm_node *,sub_prob.l);
-            sub_prob.y = Malloc(double,sub_prob.l);
-            int k;
-            for(k=0;k<ci;k++)
-            {
-                sub_prob.x[k] = x[si+k];
-                sub_prob.y[k] = +1;
-            }
-            for(k=0;k<cj;k++)
-            {
-                sub_prob.x[ci+k] = x[sj+k];
-                sub_prob.y[ci+k] = -1;
-            }
+	int p = 0;
+	for(i=0;i<nr_class;i++)
+		for(int j=i+1;j<nr_class;j++)
+		{
+			svm_problem sub_prob;
+			int si = start[i], sj = start[j];
+			int ci = count[i], cj = count[j];
+			sub_prob.l = ci+cj;
+			sub_prob.x = Malloc(svm_node *,sub_prob.l);
+			sub_prob.y = Malloc(double,sub_prob.l);
+			int k;
+			for(k=0;k<ci;k++)
+			{
+				sub_prob.x[k] = x[si+k];
+				sub_prob.y[k] = +1;
+			}
+			for(k=0;k<cj;k++)
+			{
+				sub_prob.x[ci+k] = x[sj+k];
+				sub_prob.y[ci+k] = -1;
+			}
 
-            for(k=0;k<ci;k++)
-                if(!nonzero[si+k] && fabs(f->alpha[k]) > 0)
-                    nonzero[si+k] = true;
-            for(k=0;k<cj;k++)
-                if(!nonzero[sj+k] && fabs(f->alpha[ci+k]) > 0)
-                    nonzero[sj+k] = true;
-            free(sub_prob.x);
-            free(sub_prob.y);
-            ++p;
-        }
+			for(k=0;k<ci;k++)
+				if(!nonzero[si+k] && fabs(f->alpha[k]) > 0)
+					nonzero[si+k] = true;
+			for(k=0;k<cj;k++)
+				if(!nonzero[sj+k] && fabs(f->alpha[ci+k]) > 0)
+					nonzero[sj+k] = true;
+			free(sub_prob.x);
+			free(sub_prob.y);
+			++p;
+		}
 
-    // build output
+	// build output
 
-    model->nr_class = nr_class;
+	model->nr_class = nr_class;
 
-    model->label = Malloc(int,nr_class);
-    for(i=0;i<nr_class;i++)
-        model->label[i] = label[i];
+	model->label = Malloc(int,nr_class);
+	for(i=0;i<nr_class;i++)
+		model->label[i] = label[i];
 
-    model->rho = Malloc(double,nr_class*(nr_class-1)/2);
-    for(i=0;i<nr_class*(nr_class-1)/2;i++)
-        model->rho[i] = f->rho;
+	model->rho = Malloc(double,nr_class*(nr_class-1)/2);
+	for(i=0;i<nr_class*(nr_class-1)/2;i++)
+		model->rho[i] = f->rho;
 
-    model->probA=NULL;
-    model->probB=NULL;
+	model->probA=NULL;
+	model->probB=NULL;
 
-    int total_sv = 0;
-    int *nz_count = Malloc(int,nr_class);
-    model->nSV = Malloc(int,nr_class);
-    for(i=0;i<nr_class;i++)
-    {
-        int nSV = 0;
-        for(int j=0;j<count[i];j++)
-            if(nonzero[start[i]+j])
-            {
-                ++nSV;
-                ++total_sv;
-            }
-        model->nSV[i] = nSV;
-        nz_count[i] = nSV;
-    }
+	int total_sv = 0;
+	int *nz_count = Malloc(int,nr_class);
+	model->nSV = Malloc(int,nr_class);
+	for(i=0;i<nr_class;i++)
+	{
+		int nSV = 0;
+		for(int j=0;j<count[i];j++)
+			if(nonzero[start[i]+j])
+			{
+				++nSV;
+				++total_sv;
+			}
+		model->nSV[i] = nSV;
+		nz_count[i] = nSV;
+	}
 
-    info("Total nSV = %d\n",total_sv);
+	info("Total nSV = %d\n",total_sv);
 
-    model->l = total_sv;
-    model->SV = Malloc(svm_node *,total_sv);
-    model->sv_indices = Malloc(int,total_sv);
-    p = 0;
-    for(i=0;i<l;i++)
-        if(nonzero[i])
-        {
-            model->SV[p] = x[i];
-            model->sv_indices[p++] = perm[i] + 1;
-        }
+	model->l = total_sv;
+	model->SV = Malloc(svm_node *,total_sv);
+	model->sv_indices = Malloc(int,total_sv);
+	p = 0;
+	for(i=0;i<l;i++)
+		if(nonzero[i])
+		{
+			model->SV[p] = x[i];
+			model->sv_indices[p++] = perm[i] + 1;
+		}
 
-    int *nz_start = Malloc(int,nr_class);
-    nz_start[0] = 0;
-    for(i=1;i<nr_class;i++)
-        nz_start[i] = nz_start[i-1]+nz_count[i-1];
+	int *nz_start = Malloc(int,nr_class);
+	nz_start[0] = 0;
+	for(i=1;i<nr_class;i++)
+		nz_start[i] = nz_start[i-1]+nz_count[i-1];
 
-    model->sv_coef = Malloc(double *,nr_class-1);
-    for(i=0;i<nr_class-1;i++)
-        model->sv_coef[i] = Malloc(double,total_sv);
+	model->sv_coef = Malloc(double *,nr_class-1);
+	for(i=0;i<nr_class-1;i++)
+		model->sv_coef[i] = Malloc(double,total_sv);
 
-    p = 0;
-    for(i=0;i<nr_class;i++)
-        for(int j=i+1;j<nr_class;j++)
-        {
-            // classifier (i,j): coefficients with
-            // i are in sv_coef[j-1][nz_start[i]...],
-            // j are in sv_coef[i][nz_start[j]...]
+	p = 0;
+	for(i=0;i<nr_class;i++)
+		for(int j=i+1;j<nr_class;j++)
+		{
+			// classifier (i,j): coefficients with
+			// i are in sv_coef[j-1][nz_start[i]...],
+			// j are in sv_coef[i][nz_start[j]...]
 
-            int si = start[i];
-            int sj = start[j];
-            int ci = count[i];
-            int cj = count[j];
+			int si = start[i];
+			int sj = start[j];
+			int ci = count[i];
+			int cj = count[j];
 
-            int q = nz_start[i];
-            int k;
-            for(k=0;k<ci;k++)
-                if(nonzero[si+k])
-                    model->sv_coef[j-1][q++] = f->alpha[k];
-            q = nz_start[j];
-            for(k=0;k<cj;k++)
-                if(nonzero[sj+k])
-                    model->sv_coef[i][q++] = f->alpha[ci+k];
-            ++p;
-        }
+			int q = nz_start[i];
+			int k;
+			for(k=0;k<ci;k++)
+				if(nonzero[si+k])
+					model->sv_coef[j-1][q++] = f->alpha[k];
+			q = nz_start[j];
+			for(k=0;k<cj;k++)
+				if(nonzero[sj+k])
+					model->sv_coef[i][q++] = f->alpha[ci+k];
+			++p;
+		}
 
-    free(label);
-    free(count);
-    free(perm);
-    free(start);
-    free(x);
-    free(weighted_C);
-    free(nonzero);
-    free(nz_count);
-    free(nz_start);
-    
+	free(label);
+	free(count);
+	free(perm);
+	free(start);
+	free(x);
+	free(weighted_C);
+	free(nonzero);
+	free(nz_count);
+	free(nz_start);
+	
 	return model;
 }
 
