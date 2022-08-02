@@ -72,6 +72,7 @@ struct svm_model
 };
 
 struct svm_model *svm_train(const struct svm_problem *prob, const struct svm_parameter *param);
+struct svm_model *svm_train_sub(const struct svm_problem *prob, const struct svm_parameter *param, const struct decision_function *f);
 void svm_cross_validation(const struct svm_problem *prob, const struct svm_parameter *param, int nr_fold, double *target);
 
 int svm_save_model(const char *model_file_name, const struct svm_model *model);
