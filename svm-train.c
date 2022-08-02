@@ -37,7 +37,7 @@ void exit_with_help()
 	"-b probability_estimates : type of probability estimates to train a SVC or SVR model for (default 0)\n"
 	"	0 -- no probability estimates\n"
 	"	1 -- cross-validated probability estimates\n"
-	"	2 -- simple probability estimates (faster, always yields same result as non-probabilistic SVM)\n"
+	"	2 -- simple probability estimates (faster, SVC only, always yields same result as plain SVC)\n"
 	"-wi weight : set the parameter C of class i to weight*C, for C-SVC (default 1)\n"
 	"-v n: n-fold cross validation mode\n"
 	"-q : quiet mode (no outputs)\n"
