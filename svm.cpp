@@ -2278,7 +2278,7 @@ svm_model *svm_train(const svm_problem *prob, const svm_parameter *param)
 
 				if(param->probability == 1)
 					svm_binary_svc_probability(&sub_prob,param,weighted_C[i],weighted_C[j],probA[p],probB[p]);
-				else if(param->probability == 2) // TODO get rid of double training in this case!
+				else if(param->probability == 2)
 					svm_simple_binary_svc_probability(&sub_prob,param,&f[p],weighted_C[i],weighted_C[j],probA[p],probB[p]);
 
 				for(k=0;k<ci;k++)
