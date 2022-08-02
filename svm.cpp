@@ -1976,6 +1976,70 @@ static void svm_binary_svc_probability(
 	free(perm);
 }
 
+// Simple decision values for probability estimates
+static void svm_simple_binary_svc_probability(
+	const svm_problem *prob, const svm_parameter *param,
+	double Cp, double Cn, double& probA, double& probB)
+{
+	double *dec_values = Malloc(double,prob->l);
+
+    int j;
+    struct svm_problem subprob;
+
+    subprob.l = prob->l;
+    subprob.x = Malloc(struct svm_node*,subprob.l);
+    subprob.y = Malloc(double,subprob.l);
+
+    for(j=0;j<prob->l;j++)
+    {
+        subprob.x[j] = prob->x[j];
+        subprob.y[j] = prob->y[j];
+    }
+    int p_count=0,n_count=0;
+    for(j=0;j<prob->l;j++)
+        if(prob->y[j]>0)
+            p_count++;
+        else
+            n_count++;
+
+    if(p_count==0 && n_count==0)
+        for(j=0;j<prob->l;j++)
+            dec_values[j] = 0;
+    else if(p_count > 0 && n_count == 0)
+        for(j=0;j<prob->l;j++)
+            dec_values[j] = -1;
+    else if(p_count == 0 && n_count > 0)
+        for(j=0;j<prob->l;j++)
+            dec_values[j] = 1;
+    else
+    {
+        svm_parameter subparam = *param;
+        subparam.probability=0;
+        subparam.C=1.0;
+        subparam.nr_weight=2;
+        subparam.weight_label = Malloc(int,2);
+        subparam.weight = Malloc(double,2);
+        subparam.weight_label[0]=+1;
+        subparam.weight_label[1]=-1;
+        subparam.weight[0]=Cp;
+        subparam.weight[1]=Cn;
+        struct svm_model *submodel = svm_train(&subprob,&subparam);
+        for(j=0;j<prob->l;j++)
+        {
+            svm_predict_values(submodel,prob->x[j],&(dec_values[j]));
+            // ensure +1 -1 order; reason not using CV subroutine
+            dec_values[j] *= submodel->label[0];
+        }
+        svm_free_and_destroy_model(&submodel);
+        svm_destroy_param(&subparam);
+    }
+    free(subprob.x);
+    free(subprob.y);
+	
+	sigmoid_train(prob->l,dec_values,dec_values,probA,probB);
+	free(dec_values);
+}
+
 // Return parameter of a Laplace distribution
 static double svm_svr_probability(
 	const svm_problem *prob, const svm_parameter *param)
@@ -2211,8 +2275,10 @@ svm_model *svm_train(const svm_problem *prob, const svm_parameter *param)
 					sub_prob.y[ci+k] = -1;
 				}
 
-				if(param->probability)
+				if(param->probability == 1)
 					svm_binary_svc_probability(&sub_prob,param,weighted_C[i],weighted_C[j],probA[p],probB[p]);
+				else if(param->probability == 2) // TODO get rid of double training in this case!
+					svm_simple_binary_svc_probability(&sub_prob,param,weighted_C[i],weighted_C[j],probA[p],probB[p]);
 
 				f[p] = svm_train_one(&sub_prob,param,weighted_C[i],weighted_C[j]);
 				for(k=0;k<ci;k++)
@@ -3101,8 +3167,9 @@ const char *svm_check_parameter(const svm_problem *prob, const svm_parameter *pa
 		return "shrinking != 0 and shrinking != 1";
 
 	if(param->probability != 0 &&
-	   param->probability != 1)
-		return "probability != 0 and probability != 1";
+	   param->probability != 1 &&
+	   param->probability != 2)
+		return "probability != 0 and probability != 1 and probability != 2";
 
 	if(param->probability == 1 &&
 	   svm_type == ONE_CLASS)
