@@ -2594,6 +2594,7 @@ svm_model *svm_train_sub(const svm_problem *prob, const svm_parameter *param, co
 
 	model->probA=NULL;
 	model->probB=NULL;
+	model->prob_density_marks=NULL;
 
 	int total_sv = 0;
 	int *nz_count = Malloc(int,nr_class);
